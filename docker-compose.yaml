@@ -1,0 +1,55 @@
+# nginx proxy address - http://172.17.0.1:8089
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "1"
+
+services:
+  osticket:
+    image: osticket/osticket:latest
+    container_name: osticket-app
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - osticket
+    ports:
+      - "8089:80"
+    environment:
+      TZ: ${TZ:-America/New_York}
+    volumes:
+      - ./rootfs/data/osticket:/data
+      - ./rootfs/config/osticket:/config
+    depends_on:
+      - osticket-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  osticket-db:
+    image: mariadb:11
+    container_name: osticket-db
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - osticket
+    environment:
+      TZ: ${TZ:-America/New_York}
+      MARIADB_DATABASE: ${DB_CREATE_DATABASE_NAME:-osticket}
+      MARIADB_USER: ${DB_USER_NAME:-osticket}
+      MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
+      MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_root_password}
+    volumes:
+      - ./rootfs/db/mariadb/osticket:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  osticket:
+    external: false
