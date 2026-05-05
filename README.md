@@ -50,9 +50,9 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/osticket` - Data storage
-- `./rootfs/config/osticket` - Data storage
-- `./rootfs/data/db/mariadb/osticket` - Data storage
+- `./volumes/data/osticket` - Data storage
+- `./volumes/config/osticket` - Data storage
+- `./volumes/data/db/mariadb/osticket` - Data storage
 
 ## 🔐 Security
 
