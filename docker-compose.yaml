@@ -16,6 +16,8 @@ services:
     logging: *default-logging
     networks:
       - osticket
+      - proxy
+      - cloudflare
     ports:
       - "172.17.0.1:8089:80"
     environment:
@@ -29,6 +31,8 @@ services:
       SMTP_PORT: ${EMAIL_SERVER_PORT:-587}
       SMTP_FROM: ${EMAIL_SERVER_MAIL_FROM:-support@example.com}
       SMTP_TLS: "1"
+      CONTAINER_NAME: osticket-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
     volumes:
       - ./volumes/data/osticket:/data
       - ./volumes/config/osticket:/var/www/html/upload/include/ost-config.php
@@ -39,6 +43,22 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - 'traefik.enable=true'
+      - 'cloudflare.enable=true'
+      - 'traefik.docker.network=proxy'
+      - 'cloudflare.service=http://osticket-app:80'
+      - 'cloudflare.hostname=osticket.${CLOUDFLARE_ZONE_NAME:-}'
+      - 'traefik.http.routers.osticket-app.entrypoints=http'
+      - 'traefik.http.routers.osticket-app-secure.tls=true'
+      - 'traefik.http.routers.osticket-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.middlewares.osticket-app-https-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.routers.osticket-app.middlewares=osticket-app-https-redirect'
+      - 'traefik.http.routers.osticket-app-secure.entrypoints=https'
+      - 'traefik.http.routers.osticket-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
+      - 'traefik.http.routers.osticket-app-secure.tls.certresolver=cloudflare'
+      - 'traefik.http.routers.osticket-app-secure.service=osticket-app'
+      - 'traefik.http.services.osticket-app.loadbalancer.server.port=80'
 
   osticket-db:
     image: mariadb:latest
@@ -54,6 +74,7 @@ services:
       MARIADB_USER: ${DB_USER_NAME:-osticket}
       MARIADB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
       MARIADB_ROOT_PASSWORD: ${DB_ADMIN_PASS:-changeme_admin_password}
+      CONTAINER_NAME: osticket-db
     volumes:
       - ./volumes/data/db/mariadb/osticket:/var/lib/mysql
     healthcheck:
@@ -65,3 +86,7 @@ services:
 networks:
   osticket:
     external: false
+  proxy:
+    external: true
+  cloudflare:
+    external: true
