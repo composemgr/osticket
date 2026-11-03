@@ -37,6 +37,12 @@ services:
       INSTALL_NAME: ${APP_ORG_NAME:-Support Desk}
       ADMIN_USERNAME: ${APP_ADMIN_USER:-ostadmin}
       ADMIN_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
+    healthcheck:
+      test: ['CMD', 'curl', '-s', '-o', '/dev/null', '--max-time', '5', 'http://127.0.0.1:80/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
       - './volumes/data/osticket:/data'
       - './volumes/config/osticket:/var/www/html/upload/include'
